@@ -9,11 +9,12 @@ source ~/.bashrc
 date
 echo $SLURM_JOB_NAME
 echo $SLURM_ARRAY_TASK_ID
-echo ''
-
-paramsfile=~/Sstar_files/bin/params_abw.sh
-
+# Import paramsfile value from sbatch command line
+paramsfile=$paramsfile
+#paramsfile=~/Sstar_files/bin/params_abw.sh
+echo $paramsfile
 source $paramsfile
+echo ''
 
 ## SETUP ##
 read -a ARGV <<< $(head -n $SLURM_ARRAY_TASK_ID $regionsfile | tail -n 1) # grab line from regionsfile
@@ -22,6 +23,7 @@ s=${ARGV[1]}
 e=${ARGV[2]}
 regiontag="$tag"_chr_"$chr"_start_"$s"
 
+# Import refInds value from sbatch command line
 refInds=$refInds
 
 ## BUILD PYTHON COMMAND##

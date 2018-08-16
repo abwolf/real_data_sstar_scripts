@@ -2,7 +2,7 @@
 #SBATCH --get-user-env
 source ~/.bashrc
 
-paramsfile=~/Sstar_files/bin/params_YRI_75_abw.sh
+paramsfile=~/Sstar_files/bin/params_YRI_25_abw.sh
 source $paramsfile
 
 mkdir -p $outputdir
@@ -12,7 +12,7 @@ mkdir -p $outputdir/SstarSigFiles
 refInds=$( for i in $(seq 1 $num_YRI); do cat $ind_info | awk 'BEGIN {OFS="\t"} NR!=1 {if($2=="YRI") print$0}' | shuf -n 1 - | cut -f 1 ; done )
 echo $refInds >> Ref.sample_list
 
-# sbatch --array=1-250%25 --export=refInds="$refInds" ~/Sstar_files/bin/calc_sstar_neanderthal_with_matchpvals_qsub.sh
+sbatch --array=1-250%25 --export=refInds="$refInds",paramsfile="$paramsfile" ~/Sstar_files/bin/calc_sstar_neanderthal_with_matchpvals_qsub.sh
 
 echo FIN
 
