@@ -1,0 +1,61 @@
+---
+title: "Untitled"
+author: "Aaron Wolf"
+date: "9/13/2018"
+output: html_document
+---
+
+```{r}
+
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(grid)
+library(gridExtra)
+
+```
+
+
+```{r}
+
+
+YRI_IDs <- list.files(path = '~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/')
+windows <- fread('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/Target.regions_list', select = c(2))
+
+num_s_star_snps.YRI_1 <- data.table(NULL)
+## Run through list of YRI samples used as refs
+for( ID in YRI_IDs){
+  print(ID)
+  dt <- data.table(NULL)
+  ## Run through list of possible start windows
+  for( i in windows[[1]] ){
+    infile <- paste0('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/RegionFiles/YRI_1_chr_1_start_',i,'.',ID,'.windowcalc_out.gz')
+    print(infile)
+    ## check that infile is not an empty file (i.e. is not totally masked, like at centromeres)
+    if(file.info(infile)$size > 20){
+      tmp <- fread(paste0('gunzip -c ',infile), header=TRUE, select=c('n_region_ind_snps', 's_star', 'num_s_star_snps'))
+      tmp <- filter(tmp, s_star>0)
+      dt <- rbind(dt, tmp)
+      remove(tmp)
+      gc()
+    } else { next }
+  }
+  ## assign YRI_ID to datatable, then bind with previous YRI_IDs 
+  dt[,YRI_ID:= ID]
+  num_s_star_snps.YRI_1 <- rbind(num_s_star_snps.YRI_1, dt)
+}
+
+
+```
+
+
+```{r}
+
+num_s_star_snps.YRI_1$order <- reorder(num_s_star_snps.YRI_1$YRI_ID, num_s_star_snps.YRI_1$n_region_ind_snps)
+
+ggplot() + theme_bw() +
+  geom_violin(data=num_s_star_snps.YRI_1, aes(x=desc(order), y = log(n_region_ind_snps), fill=as.factor(YRI_ID)), draw_quantiles = c(0.1, 0.5, 0.9)) +
+  theme()
+```
+

@@ -47,7 +47,8 @@ cmd=$(echo " ~/software/anaconda2/bin/python $windowcalcscript \n
     -r $r1 \n
     -ir $ir1 $ir2 $ir3 \n
     | gzip -c - \n
-    > $outputdir/RegionFiles/$regiontag.$(echo $refInds | cut -f 1 -d ' ').windowcalc_out.gz")
+    > ./RegionFiles/$regiontag.$(echo $refInds | cut -f 1 -d ' ').windowcalc_out.gz")
+    #> $outputdir/RegionFiles/$regiontag.$(echo $refInds | cut -f 1 -d ' ').windowcalc_out.gz")
 
 echo -e $cmd
 

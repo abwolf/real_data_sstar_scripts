@@ -1,0 +1,367 @@
+---
+title: "summarise_Sstar_bedfiles"
+author: "Aaron Wolf"
+date: "8/21/2018"
+output: html_document
+---
+
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(grid)
+library(gridExtra)
+```
+
+
+```{r}
+
+load_sample_data.fn = function(YRI_COUNT, REPS){
+  dt <- data.table(NULL)
+  print(YRI_COUNT)
+  dir_path = paste0('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_',YRI_COUNT,'/SstarSigFiles/')
+
+  print(dir_path)
+  ## Collect list of files for each replicate in directory and save names --> replicates are named by first YRI sample in list of ref-samples used
+  filenames <<- list.files(path = dir_path)
+
+  ## Load in files individualls, and summarise the number of introgressed kb
+  for (name in filenames){
+    print(name)
+    assign(x = name,
+           value = fread(input = paste0('gunzip -c ', dir_path,'/',name,'/*ALL.*.bed.merged.gz'), col.names = c('msp_ID','start','end')) %>%
+             mutate(kb=(end-start)/1000) %>%
+             group_by(msp_ID) %>%
+             summarise(YRI_kb=sum(kb)) %>%
+             as.data.table(),
+          inherits=TRUE)
+  }
+  
+  ## Join replicate files together, for each sample (row) a new column for number of introgresse kb for a given replicate
+  dt <- left_join(get(filenames[1]), get(filenames[2]), by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2'))
+  i=3
+  while(i <= as.numeric(REPS) ){
+    #var <- paste0('YRI_kb.',i)
+    dt <- left_join(dt, get(filenames[i]), by=c('msp_ID')) %>% as.data.table()
+    i = i+1
+  }
+  
+  print(head(dt))
+  
+  ## Rename columns of joined table using the replicates number
+  list <- c('msp_ID')
+
+  for ( i in seq(1,as.numeric(REPS)) ){
+    print(i)
+    list <- c(list, paste0('YRI_kb.',i))
+  }
+  
+  setnames(dt, list)
+  
+  ## Create a summary file and run the summary_for_ind command for the given YRI_count data
+  sum_ind = paste0('summary_for_ind.',YRI_COUNT)
+  assign( x = sum_ind,
+            value = as.data.table(t(apply(X=dt, MARGIN = 1, FUN = summary_for_ind.fn,REPS=REPS))))
+  
+}
+
+
+
+#######################################
+#######################################
+summary_for_ind.fn = function(x){
+  # Add a little jitter to the KB values to prevent all of them being the same, which messes with the t-test
+  # vector <- c()
+  # for ( i in seq(1,as.numeric(REPS)) ){
+  #   print(i)
+  #   vector <- c(list, as.numeric(x[[paste0('YRI_kb.',i)]])+as.numeric(sample(c(-0.05,0.05),1,replace = TRUE))) 
+  # }
+  vector <- c( as.numeric(x[[2]]), as.numeric(x[[3]])+0.05, as.numeric(x[[4]])-0.05, as.numeric(x[[5]])-0.05, as.numeric(x[[6]])+0.05 )
+  sd <- sd( vector )
+  #print(sd)
+  length <- length(vector)
+  #print(length)
+  x[["mean"]] <- round(mean(vector), digits=2)
+  x[["se"]] <- round(sd/sqrt(length),digits = 2)
+  x[["ci"]] <- paste0(round(t.test(vector)$conf.int[[1]], digits = 0),':', round(t.test(vector)$conf.int[[2]], digits = 0))
+  #return(x[c("msp_ID","mean","se")])
+  return(x[c("msp_ID","mean","se","ci")])
+}
+
+
+
+############################
+############################
+normalize.fn <- function(x){
+  #mean.YRI_1 <- as.numeric(x[[2]])
+  x[["norm.mean.YRI_1"]] <- as.numeric(x[["mean.YRI_1"]])/mean.YRI_1
+  x[["norm.mean.YRI_2"]] <- as.numeric(x[["mean.YRI_2"]])/mean.YRI_1
+  x[["norm.mean.YRI_5"]] <- as.numeric(x[["mean.YRI_5"]])/mean.YRI_1
+  x[["norm.mean.YRI_10"]] <- as.numeric(x[["mean.YRI_10"]])/mean.YRI_1
+  x[['norm.mean.YRI_25']] <- as.numeric(x[["mean.YRI_25"]])/mean.YRI_1
+  x[['norm.mean.YRI_50']] <- as.numeric(x[["mean.YRI_50"]])/mean.YRI_1
+  x[['norm.mean.YRI_75']] <- as.numeric(x[["mean.YRI_75"]])/mean.YRI_1
+  x[['norm.mean.YRI_108']] <- as.numeric(x[["mean.YRI_108"]])/mean.YRI_1
+
+  return(x)
+  #return(x[c("msp_ID", "norm.mean.YRI_1", "norm.mean.YRI_25", "norm.mean.YRI_50", "norm.mean.YRI_75", "norm.mean.YRI_108")])
+}
+
+```
+
+
+```{r YRI_1}
+
+NA18876 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA18876/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18917 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA18917/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19137 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA19137/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19144 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA19144/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19247 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA19247/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA18876, NA18917, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA19137, by=c('msp_ID')) %>% 
+  left_join(NA19144, by=c('msp_ID')) %>% 
+  left_join(NA19247, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.1 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+
+#summary_for_YRI.1 <- as.data.table(apply(X = dt[,-1,with=FALSE], MARGIN = 2, FUN = mean), keep.rownames = TRUE)
+```
+
+
+```{r YRI_2}
+list.files('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_2/SstarSigFiles/')
+
+NA18867 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_2/SstarSigFiles/NA18867/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18868 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_2/SstarSigFiles/NA18868/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19099 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_2/SstarSigFiles/NA19099/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19160 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_2/SstarSigFiles/NA19160/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19248 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_2/SstarSigFiles/NA19248/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA18876, NA18868, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA19099, by=c('msp_ID')) %>% 
+  left_join(NA19160, by=c('msp_ID')) %>% 
+  left_join(NA19248, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.2 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+```
+
+
+```{r YRI_5}
+list.files('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_5/SstarSigFiles/')
+
+NA18504 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_5/SstarSigFiles/NA18504/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18865 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_5/SstarSigFiles/NA18865/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18867 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_5/SstarSigFiles/NA18867/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18916 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_5/SstarSigFiles/NA18916/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19143 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_5/SstarSigFiles/NA19143/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA18504, NA18865, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA18867, by=c('msp_ID')) %>% 
+  left_join(NA18916, by=c('msp_ID')) %>% 
+  left_join(NA19143, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.5 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+```
+
+
+```{r YRI_10}
+list.files('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_10/SstarSigFiles/')
+
+NA19096 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_10/SstarSigFiles/NA19096/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19121 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_10/SstarSigFiles/NA19121/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19146 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_10/SstarSigFiles/NA19146/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19204 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_10/SstarSigFiles/NA19204/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19235 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_10/SstarSigFiles/NA19235/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA19096, NA19121, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA19146, by=c('msp_ID')) %>% 
+  left_join(NA19204, by=c('msp_ID')) %>% 
+  left_join(NA19235, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.10 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+```
+
+
+```{r YRI_25}
+list.files('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_25/SstarSigFiles/')
+
+NA18499 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_25/SstarSigFiles/NA18499/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18924 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_25/SstarSigFiles/NA18924/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19144 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_25/SstarSigFiles/NA19144/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19185 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_25/SstarSigFiles/NA19185/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19225 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_25/SstarSigFiles/NA19225/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA18499, NA18924, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA19144, by=c('msp_ID')) %>% 
+  left_join(NA19185, by=c('msp_ID')) %>% 
+  left_join(NA19225, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.25 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+```
+
+
+```{r YRI_50}
+list.files('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_50/SstarSigFiles/')
+
+NA18511 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_50/SstarSigFiles/NA18511/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18870 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_50/SstarSigFiles/NA18870/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19108 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_50/SstarSigFiles/NA19108/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19175 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_50/SstarSigFiles/NA19175/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19185 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_50/SstarSigFiles/NA19185/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA18511, NA18870, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA19108, by=c('msp_ID')) %>% 
+  left_join(NA19175, by=c('msp_ID')) %>% 
+  left_join(NA19185, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.50 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+```
+
+
+```{r YRI_75}
+list.files('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_75/SstarSigFiles/')
+
+NA18502 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_75/SstarSigFiles/NA18502/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18510 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_75/SstarSigFiles/NA18510/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18910 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_75/SstarSigFiles/NA18910/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18924 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_75/SstarSigFiles/NA18924/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19099 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_75/SstarSigFiles/NA19099/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA18502, NA18510, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA18910, by=c('msp_ID')) %>% 
+  left_join(NA18924, by=c('msp_ID')) %>% 
+  left_join(NA19099, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.75 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+```
+
+
+```{r YRI_108}
+list.files('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_108/SstarSigFiles/')
+
+NA18498 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_108/SstarSigFiles/NA18498/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18522 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_108/SstarSigFiles/NA18522/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18856 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_108/SstarSigFiles/NA18856/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA18907 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_108/SstarSigFiles/NA18907/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+NA19146 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_108/SstarSigFiles/NA19146/*ALL*.bed.merged.gz', col.names=c('msp_ID','start','end')) %>% mutate(kb=(end-start)/1000) %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+
+dt <- left_join(NA18498, NA18522, by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2')) %>%
+  left_join(NA18856, by=c('msp_ID')) %>% 
+  left_join(NA18907, by=c('msp_ID')) %>% 
+  left_join(NA19146, by=c('msp_ID')) %>% 
+  as.data.table()
+setnames(dt, list)
+
+summary_for_ind.108 <- as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn)))
+
+```
+
+
+```{r Create combined data table and plot}
+
+dt <- left_join(summary_for_ind.1[,c("msp_ID","mean","se"),with=FALSE], summary_for_ind.2[,c("msp_ID","mean", "se"),with=FALSE], by=c('msp_ID')) %>%
+      rename( mean.YRI_1 = mean.x, se.YRI_1 = se.x, mean.YRI_2 = mean.y, se.YRI_2 = se.y ) %>%
+      left_join(summary_for_ind.5[,c("msp_ID","mean","se"),with=FALSE], by=c('msp_ID')) %>% rename( mean.YRI_5 = mean, se.YRI_5 = se) %>%
+      left_join(summary_for_ind.10[,c("msp_ID","mean","se"),with=FALSE], by=c('msp_ID')) %>% rename( mean.YRI_10 = mean, se.YRI_10 = se) %>%
+      left_join(summary_for_ind.25[,c("msp_ID","mean","se"),with=FALSE], by=c('msp_ID')) %>% rename( mean.YRI_25 = mean, se.YRI_25 = se) %>%
+      left_join(summary_for_ind.50[,c("msp_ID","mean","se"),with=FALSE], by=c('msp_ID')) %>% rename( mean.YRI_50 = mean, se.YRI_50 = se) %>%
+      left_join(summary_for_ind.75[,c("msp_ID","mean","se"),with=FALSE], by=c('msp_ID')) %>% rename( mean.YRI_75 = mean, se.YRI_75 = se) %>%
+      left_join(summary_for_ind.108[,c("msp_ID","mean","se"),with=FALSE], by=c('msp_ID')) %>% rename( mean.YRI_108 = mean, se.YRI_108 = se) %>%
+      as.data.table()
+
+mean.YRI_1 <- mean(as.numeric(dt$mean.YRI_1))
+
+dt <- as.data.table(t(apply(X=dt, MARGIN = 1, FUN = normalize.fn)))
+
+dt <- rbind(
+            dt %>% select(msp_ID, norm.mean.YRI_1, mean.YRI_1, se.YRI_1) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=1),
+            dt %>% select(msp_ID, norm.mean.YRI_2, mean.YRI_2, se.YRI_2) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=2),
+            dt %>% select(msp_ID, norm.mean.YRI_5, mean.YRI_5, se.YRI_5) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=5),
+            dt %>% select(msp_ID, norm.mean.YRI_10, mean.YRI_10, se.YRI_10) %>%setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=10),
+            dt %>% select(msp_ID, norm.mean.YRI_25, mean.YRI_25, se.YRI_25) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=25),
+            dt %>% select(msp_ID, norm.mean.YRI_50, mean.YRI_50, se.YRI_50) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=50),
+            dt %>% select(msp_ID, norm.mean.YRI_75, mean.YRI_75, se.YRI_75) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=75),
+            dt %>% select(msp_ID, norm.mean.YRI_108, mean.YRI_108, se.YRI_108) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=108)
+            )
+
+
+
+norm.mean.plot <- ggplot() +
+  theme_bw() +
+  geom_violin(data = dt, aes(x = as.factor(YRI), y=as.numeric(norm.mean), fill=as.factor(YRI)), draw_quantiles = c(0.1, 0.5, 0.9)) +
+  scale_y_continuous(breaks=seq(from = 0, to = 2,by = 0.1), expand = c(0.02,0)) +
+  scale_x_discrete("YRI", labels = c('YRI_1','YRI_2','YRI_5','YRI_10','YRI_25','YRI_50','YRI_75','YRI_108')) +
+  geom_label(data = dt %>% group_by(YRI) %>% summarise(mn = mean(as.numeric(mean))/205360) %>% as.data.table(), aes(x=as.factor(YRI), y = 1.5-(.01/as.numeric(mn)), label= round(as.numeric(mn),4)) ) + 
+  xlab("YRI_count") +
+  ylab("(S*kb , YRI_X) / [ mean(S*kb , YRI_1) ]") +
+  ggtitle('Variation in S*kb called for YRI_X') +
+  coord_cartesian(ylim=c(0,2)) +
+  theme()
+
+
+norm.se.plot <- ggplot() +
+  theme_bw() +
+  geom_violin( data = dt, aes(x= as.factor(YRI), y = as.numeric(se)/(mean(as.numeric(dt[YRI==1]$se))), fill=as.factor(YRI)), scale="width" ) +
+  scale_y_continuous(breaks=seq(from = 0, to = 3,by = 0.2), expand = c(0.02,0)) +
+  scale_x_discrete("YRI", labels = c('YRI_1','YRI_2','YRI_5','YRI_10','YRI_25','YRI_50','YRI_75','YRI_108')) +
+  geom_label(data = dt %>% group_by(YRI) %>% summarise(mn = mean(as.numeric(mean))/205360) %>% as.data.table(), aes(x=as.factor(YRI), y = 1.6-(.015/as.numeric(mn)), label= round(as.numeric(mn),4)) ) + 
+  xlab("YRI_count") +
+  ylab("(S*kb_se , YRI_X) / [ mean(S*kb_se, YRI_1) ]") +
+  ggtitle('Variation in S*kb StdErr for YRI_X') +
+  coord_cartesian(ylim=c(0,3)) +
+  theme()
+
+grid.arrange(norm.mean.plot, norm.se.plot, ncol=2)
+
+
+
+```
