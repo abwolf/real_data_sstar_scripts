@@ -11,7 +11,8 @@ projdir=/Genomics/akeylab/abwolf/SimulatedDemographic/Sstar/chr1_variable_ref/
 
 
 tag=YRI_$num_YRI
-outputdir=$projdir/Output_$tag
+#outputdir=$projdir/Output_$tag
+outputdir=$projdir/EUR_v_EAS_w_$tag
 regionsfile=$resources/regions_1Mb_from_hapmap_range.txt
 recomb_rates_file=$resources/recombination_rates_per_50Kb_window_allchr.txt
 
@@ -22,10 +23,10 @@ vcf_arch=$resources/chr"$chr".altai_neand_mpi_minimal_filtered_lowqual.vcf.gz
 vcf_modern=/Genomics/grid/users/limingli/data/1kg-phase3/ALL.chr"$chr".phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
 ind_info=$resources/integrated_call_samples_v3.20130502.ALL.panel
 
-targetpops="EUR"
+targetpops="EUR EAS"
 refpop="YRI"
 
-samplelistfile=$resources/EUR.sample_list
+samplelistfile=$resources/EUR_EAS.sample_list
 
 
 

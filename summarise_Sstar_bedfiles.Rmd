@@ -18,54 +18,54 @@ library(gridExtra)
 
 ```{r}
 
-load_sample_data.fn = function(YRI_COUNT, REPS){
-  dt <- data.table(NULL)
-  print(YRI_COUNT)
-  dir_path = paste0('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_',YRI_COUNT,'/SstarSigFiles/')
-
-  print(dir_path)
-  ## Collect list of files for each replicate in directory and save names --> replicates are named by first YRI sample in list of ref-samples used
-  filenames <<- list.files(path = dir_path)
-
-  ## Load in files individualls, and summarise the number of introgressed kb
-  for (name in filenames){
-    print(name)
-    assign(x = name,
-           value = fread(input = paste0('gunzip -c ', dir_path,'/',name,'/*ALL.*.bed.merged.gz'), col.names = c('msp_ID','start','end')) %>%
-             mutate(kb=(end-start)/1000) %>%
-             group_by(msp_ID) %>%
-             summarise(YRI_kb=sum(kb)) %>%
-             as.data.table(),
-          inherits=TRUE)
-  }
-  
-  ## Join replicate files together, for each sample (row) a new column for number of introgresse kb for a given replicate
-  dt <- left_join(get(filenames[1]), get(filenames[2]), by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2'))
-  i=3
-  while(i <= as.numeric(REPS) ){
-    #var <- paste0('YRI_kb.',i)
-    dt <- left_join(dt, get(filenames[i]), by=c('msp_ID')) %>% as.data.table()
-    i = i+1
-  }
-  
-  print(head(dt))
-  
-  ## Rename columns of joined table using the replicates number
-  list <- c('msp_ID')
-
-  for ( i in seq(1,as.numeric(REPS)) ){
-    print(i)
-    list <- c(list, paste0('YRI_kb.',i))
-  }
-  
-  setnames(dt, list)
-  
-  ## Create a summary file and run the summary_for_ind command for the given YRI_count data
-  sum_ind = paste0('summary_for_ind.',YRI_COUNT)
-  assign( x = sum_ind,
-            value = as.data.table(t(apply(X=dt, MARGIN = 1, FUN = summary_for_ind.fn,REPS=REPS))))
-  
-}
+# load_sample_data.fn = function(YRI_COUNT, REPS){
+#   dt <- data.table(NULL)
+#   print(YRI_COUNT)
+#   dir_path = paste0('~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_',YRI_COUNT,'/SstarSigFiles/')
+# 
+#   print(dir_path)
+#   ## Collect list of files for each replicate in directory and save names --> replicates are named by first YRI sample in list of ref-samples used
+#   filenames <<- list.files(path = dir_path)
+# 
+#   ## Load in files individualls, and summarise the number of introgressed kb
+#   for (name in filenames){
+#     print(name)
+#     assign(x = name,
+#            value = fread(input = paste0('gunzip -c ', dir_path,'/',name,'/*ALL.*.bed.merged.gz'), col.names = c('msp_ID','start','end')) %>%
+#              mutate(kb=(end-start)/1000) %>%
+#              group_by(msp_ID) %>%
+#              summarise(YRI_kb=sum(kb)) %>%
+#              as.data.table(),
+#           inherits=TRUE)
+#   }
+#   
+#   ## Join replicate files together, for each sample (row) a new column for number of introgresse kb for a given replicate
+#   dt <- left_join(get(filenames[1]), get(filenames[2]), by=c('msp_ID')) %>% setnames(c('msp_ID','YRI_kb.1','YRI_kb.2'))
+#   i=3
+#   while(i <= as.numeric(REPS) ){
+#     #var <- paste0('YRI_kb.',i)
+#     dt <- left_join(dt, get(filenames[i]), by=c('msp_ID')) %>% as.data.table()
+#     i = i+1
+#   }
+#   
+#   print(head(dt))
+#   
+#   ## Rename columns of joined table using the replicates number
+#   list <- c('msp_ID')
+# 
+#   for ( i in seq(1,as.numeric(REPS)) ){
+#     print(i)
+#     list <- c(list, paste0('YRI_kb.',i))
+#   }
+#   
+#   setnames(dt, list)
+#   
+#   ## Create a summary file and run the summary_for_ind command for the given YRI_count data
+#   sum_ind = paste0('summary_for_ind.',YRI_COUNT)
+#   assign( x = sum_ind,
+#             value = as.data.table(t(apply(X=dt, MARGIN = 1, FUN = summary_for_ind.fn,REPS=REPS))))
+#   
+# }
 
 
 
@@ -108,6 +108,10 @@ normalize.fn <- function(x){
   return(x)
   #return(x[c("msp_ID", "norm.mean.YRI_1", "norm.mean.YRI_25", "norm.mean.YRI_50", "norm.mean.YRI_75", "norm.mean.YRI_108")])
 }
+
+##########################
+##########################
+list <- c('msp_ID','YRI_kb.1', 'YRI_kb.2','YRI_kb.2','YRI_kb.4','YRI_kb.5')
 
 ```
 
@@ -333,8 +337,15 @@ dt <- rbind(
             dt %>% select(msp_ID, norm.mean.YRI_108, mean.YRI_108, se.YRI_108) %>% setnames(c('msp_ID','norm.mean','mean','se')) %>% as.data.table() %>% mutate(YRI=108)
             )
 
+# Kruskal-Wallis rank sum test
+## non-parametric alternative to ANOVA, measures significance of difference betwen populations without assuming normality of sample distribution
+dt.kw <- kruskal.test(norm.mean ~ YRI, data=dt)
+dt.kw$p.value
 
+pairwise.wilcox.test(as.numeric(dt$norm.mean), dt$YRI,
+                 p.adjust.method = "BH")
 
+##############################
 norm.mean.plot <- ggplot() +
   theme_bw() +
   geom_violin(data = dt, aes(x = as.factor(YRI), y=as.numeric(norm.mean), fill=as.factor(YRI)), draw_quantiles = c(0.1, 0.5, 0.9)) +

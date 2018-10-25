@@ -1,6 +1,6 @@
 
-chr=1
-num_YRI=10
+chr=22
+num_SAN=2
 
 # paths
 awdir=/Genomics/grid/users/abwolf/
@@ -10,7 +10,7 @@ windowcalcscript=$awdir/SimulatedDemographic/Sstar/s_star_git/bin/windowed_calcu
 projdir=/Genomics/akeylab/abwolf/SimulatedDemographic/Sstar/chr1_variable_ref/
 
 
-tag=YRI_$num_YRI
+tag=SAN_$num_SAN
 #outputdir=$projdir/Output_$tag
 outputdir=$projdir/EUR_v_EAS_w_$tag
 regionsfile=$resources/regions_1Mb_from_hapmap_range.txt
@@ -19,14 +19,17 @@ recomb_rates_file=$resources/recombination_rates_per_50Kb_window_allchr.txt
 
 bsg_ancestral=$resources/chimp_chrAll.bsg
 #vcf_arch=/Genomics/grid/users/limingli/data/Altai_mq25/chr"$chr"_mq25_mapab100.vcf.gz
-vcf_arch=$resources/chr"$chr".altai_neand_mpi_minimal_filtered_lowqual.vcf.gz
-vcf_modern=/Genomics/grid/users/limingli/data/1kg-phase3/ALL.chr"$chr".phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
-ind_info=$resources/integrated_call_samples_v3.20130502.ALL.panel
+#vcf_arch=$resources/chr"$chr".altai_neand_mpi_minimal_filtered_lowqual.vcf.gz
+vcf_arch=$awdir/Sstar_files/archive/Scalc.nobackup.sv/program_data/filtered_vcfs_neand_mpi_minimal_filters/chr22.neand_filtered.vcf.gz
+#vcf_modern=/Genomics/grid/users/limingli/data/1kg-phase3/ALL.chr"$chr".phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
+vcf_modern=$awdir/Sstar_files/test/chr"$chr".1kG_ALL.SGDP_San.vcf.gz
+#ind_info=$resources/integrated_call_samples_v3.20130502.ALL.panel
+ind_info=$awdir/Sstar_files/test/ind_info.txt
 
-targetpops="EUR EAS"
-refpop="YRI"
+targetpops="EUR"
+refpop="SAN"
 
-samplelistfile=$resources/EUR_EAS.sample_list
+samplelistfile=$resources/EUR.sample_list
 
 
 

@@ -4,25 +4,25 @@ library(dplyr)
 library(tidyr)
 
 
-NA18522 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/YRI_1_chr_1_start_ALL.NA18522.sstar_sig.bed.gz', col.names=c('msp_ID','start','end'))
+NA18876 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA18876/YRI_1_chr_1_start_ALL.NA18876.sstar_sig.bed.gz', col.names=c('msp_ID','start','end'))
 
 
-NA19223 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/YRI_1_chr_1_start_ALL.NA19223.sstar_sig.bed.gz', col.names=c('msp_ID','start','end'))
+NA19137 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA19137/YRI_1_chr_1_start_ALL.NA19137.sstar_sig.bed.gz', col.names=c('msp_ID','start','end'))
 
-NA19239 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/YRI_1_chr_1_start_ALL.NA19239.sstar_sig.bed.gz', col.names=c('msp_ID','start','end'))
-
-
-NA18522 <- NA18522[,kb:=(end-start)/1000] %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
-NA19223 <- NA19223[,kb:=(end-start)/1000] %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
-NA19239 <- NA19239[,kb:=(end-start)/1000] %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
-
-dt <- left_join(NA18522, NA19223, by=c('msp_ID')) %>% left_join(NA19239,) %>% as.data.table() 
-
-as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary.fn )))
+NA19247 <- fread(input = 'gunzip -c ~/DATALab/SimulatedDemographic/Sstar/chr1_variable_ref/Output_YRI_1/SstarSigFiles/NA19247/YRI_1_chr_1_start_ALL.NA19247.sstar_sig.bed.gz', col.names=c('msp_ID','start','end'))
 
 
+NA18876 <- NA18876[,kb:=(end-start)/1000] %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+NA19137 <- NA19137[,kb:=(end-start)/1000] %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
+NA19247 <- NA19247[,kb:=(end-start)/1000] %>% group_by(msp_ID) %>% summarise(YRI_kb=sum(kb)) %>% as.data.table()
 
-summary.fn = function(x){
+dt <- left_join(NA18876, NA19137, by=c('msp_ID')) %>% left_join(NA19247) %>% as.data.table() 
+
+as.data.table(t(apply(X = dt, MARGIN = 1, FUN = summary_for_ind.fn )))
+
+
+
+summary_for_ind.fn = function(x){
   vector <- c( as.numeric(x[["YRI_kb.x"]]), as.numeric(x[["YRI_kb.y"]]), as.numeric(x[["YRI_kb"]]) ) 
   sd <- sd( vector )
   length <- length(vector)
